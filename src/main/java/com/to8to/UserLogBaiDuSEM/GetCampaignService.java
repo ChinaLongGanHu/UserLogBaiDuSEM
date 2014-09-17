@@ -155,28 +155,6 @@ public class GetCampaignService
             e.printStackTrace();
         }
     }
-    
-    public static void upLoad2HDFS() throws FileNotFoundException, IOException
-    {
-        Config config = new Config("hdfs.properties");
-        String LOCAL_SRC = config.get("LOCAL_SRC");
-        String CLOUD_DEST = config.get("CLOUD_DEST");
-        InputStream in = new BufferedInputStream(new FileInputStream(LOCAL_SRC));
-        Configuration conf = new Configuration();
-        conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName()
-                );  
-        conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName() );
-        FileSystem fs = FileSystem.get(URI.create(CLOUD_DEST), conf);
-        OutputStream out = fs.create(new Path(CLOUD_DEST), new Progressable()
-        {
-            @Override
-            public void progress()
-            {
-                System.out.println("upload file to hdfs");
-            }
-        });
-        IOUtils.copyBytes(in, out, 1024, true);
-    }
 
     public static void file2Hive(String yesterday) throws Exception
     {
@@ -187,7 +165,7 @@ public class GetCampaignService
         Connection conn = DriverManager.getConnection(hive_jdbc_url);
         Statement stmt = conn.createStatement();
         String filepath = config.get("hdfs_file_path");
-        String sql = "load data inpath '"+ filepath + "' overwrite into table sem_campaigndata PARTITION (dt="
+        String sql = "load data local inpath '"+ filepath + "' overwrite into table sem_campaigndata PARTITION (dt="
                 + yesterday + ")";
         stmt.execute(sql);
     }
@@ -351,7 +329,6 @@ public class GetCampaignService
             String yestedayDate = new SimpleDateFormat("yyyyMMdd").format(calendar
                     .getTime());
             getCampinData();   
-            upLoad2HDFS();
             file2Hive(yestedayDate);
         }
         catch (Exception e)
