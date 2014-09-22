@@ -332,12 +332,23 @@ public class GetCampaignService
             {
                 getCampinData(configurls[i]);
             }
-
-            Calendar calendar = Calendar.getInstance();// 此时打印它获取的是系统当前时间
-            calendar.add(Calendar.DATE, -1); // 得到前一天
-            String yestedayDate = new SimpleDateFormat("yyyyMMdd")
-                    .format(calendar.getTime());
             
+            String yestedayDate="";
+            
+            if(args.length==0)
+            {
+                Calendar calendar = Calendar.getInstance();// 此时打印它获取的是系统当前时间
+                calendar.add(Calendar.DATE, -1); // 得到前一天
+                yestedayDate = new SimpleDateFormat("yyyyMMdd")
+                        .format(calendar.getTime());
+                logger.debug("yestedayDate: "+yestedayDate);
+            }
+            else
+            {
+                yestedayDate=args[0];
+                logger.debug("yestedayDate 2: "+yestedayDate);
+            }
+
             file2Hive(yestedayDate);
             
         }
