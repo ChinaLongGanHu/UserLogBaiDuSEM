@@ -1,17 +1,12 @@
 package com.to8to.UserLogBaiDuSEM;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -21,16 +16,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Progressable;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.baidu.drapi.autosdk.core.CommonService;
 import com.baidu.drapi.autosdk.core.ResHeader;
@@ -50,16 +42,19 @@ import com.to8to.commons.utils.Config;
 public class GetCampaignService
 {
 
+    public static Logger              logger     = LoggerFactory
+                                                         .getLogger(GetCampaignService.class);
+
     public static Map<String, String> campMap    = new HashMap<String, String>();
 
     public static Map<String, String> adgroupMap = new HashMap<String, String>();
 
-    public static void getCampMap()
+    public static void getCampMap(String configurl)
     {
-         Config config = new Config("baidusem.properties");
-        
+        Config config = new Config(configurl);
+
         String campaignlocal = config.get("campaignlocal");
-        
+
         File file = new File(campaignlocal);
 
         try
@@ -82,10 +77,10 @@ public class GetCampaignService
 
     }
 
-    public static void getAdgroupMap()
+    public static void getAdgroupMap(String configurl)
     {
 
-        Config config = new Config("baidusem.properties");
+        Config config = new Config(configurl);
         String adgrouplocal = config.get("adgrouplocal");
         File file = new File(adgrouplocal);
 
@@ -108,14 +103,14 @@ public class GetCampaignService
         }
     }
 
-    public static void makeFile()
+    public static void makeFile(String configurl)
     {
-         Config config = new Config("baidusem.properties");
-        
+        Config config = new Config(configurl);
+
         String keywordlocal = config.get("keywordlocal");
-        
+
         String keywordlocaltxt = config.get("keywordlocaltxt");
-        
+
         File file = new File(keywordlocal);
         try
         {
@@ -124,7 +119,7 @@ public class GetCampaignService
 
             BufferedReader reader = new BufferedReader(read);
 
-            FileWriter writer = new FileWriter(keywordlocaltxt, false);
+            FileWriter writer = new FileWriter(keywordlocaltxt, true);
 
             String line = reader.readLine();
 
@@ -165,7 +160,8 @@ public class GetCampaignService
         Connection conn = DriverManager.getConnection(hive_jdbc_url);
         Statement stmt = conn.createStatement();
         String filepath = config.get("hdfs_file_path");
-        String sql = "load data local inpath '"+ filepath + "' overwrite into table sem_campaigndata PARTITION (dt="
+        String sql = "load data local inpath '" + filepath
+                + "' overwrite into table sem_campaigndata PARTITION (dt="
                 + yesterday + ")";
         stmt.execute(sql);
     }
@@ -194,23 +190,26 @@ public class GetCampaignService
         httpClient.getConnectionManager().shutdown();
     }
 
-    public static void getCampinData() throws Exception
+    public static void getCampinData(String configurl) throws Exception
     {
         try
         {
-            Config config = new Config("baidusem.properties");
+
+            Config config = new Config(configurl);
+
             String serverurl = config.get("serverurl");
             String username = config.get("username");
-            username = new String(username.getBytes("ISO-8859-1"),"UTF-8");
+            username = new String(username.getBytes("ISO-8859-1"), "UTF-8");
             String password = config.get("password");
-            String token = config.get("token");     
+            String token = config.get("token");
+
             String campaignlocalgz = config.get("campaignlocalgz");
             String adgrouplocalgz = config.get("adgrouplocalgz");
             String keywordlocalgz = config.get("keywordlocalgz");
             String campaignlocal = config.get("campaignlocal");
             String adgrouplocal = config.get("adgrouplocal");
             String keywordlocal = config.get("keywordlocal");
-            
+
             CommonService factory = ServiceFactory.getInstance();
             factory.setServerUrl(serverurl);
             factory.setUsername(username);
@@ -248,15 +247,15 @@ public class GetCampaignService
                     String campaignFilePath = filePathType
                             .getCampaignFilePath();
 
-                    System.out.println("campaignFilePath: " + campaignFilePath);
+                    logger.debug("campaignFilePath: " + campaignFilePath);
 
                     String adgroupFilePath = filePathType.getAdgroupFilePath();
 
-                    System.out.println("adgroupFilePath: " + adgroupFilePath);
+                    logger.debug("adgroupFilePath: " + adgroupFilePath);
 
                     String keywordFilePath = filePathType.getKeywordFilePath();
 
-                    System.out.println("keywordFilePath: " + keywordFilePath);
+                    logger.debug("keywordFilePath: " + keywordFilePath);
 
                     downloadFile(campaignFilePath, campaignlocalgz);
 
@@ -270,11 +269,11 @@ public class GetCampaignService
 
                     doUncompressFile(keywordlocalgz, keywordlocal);
 
-                    getCampMap();
+                    getCampMap(configurl);
 
-                    getAdgroupMap();
+                    getAdgroupMap(configurl);
 
-                    makeFile();
+                    makeFile(configurl);
 
                     flag = false;
 
@@ -321,21 +320,31 @@ public class GetCampaignService
 
     public static void main(String[] args)
     {
-        
+
         try
         {
+
+            String[] configurls =
+            { "baidusem0.properties", "baidusem1.properties",
+                    "baidusem2.properties" };
+
             Calendar calendar = Calendar.getInstance();// 此时打印它获取的是系统当前时间
             calendar.add(Calendar.DATE, -1); // 得到前一天
-            String yestedayDate = new SimpleDateFormat("yyyyMMdd").format(calendar
-                    .getTime());
-            getCampinData();   
+            String yestedayDate = new SimpleDateFormat("yyyyMMdd")
+                    .format(calendar.getTime());
+
+            for (int i = 0; i < configurls.length; i++)
+            {
+                getCampinData(configurls[i]);
+            }
+
             file2Hive(yestedayDate);
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
-        
+
     }
 
 }
