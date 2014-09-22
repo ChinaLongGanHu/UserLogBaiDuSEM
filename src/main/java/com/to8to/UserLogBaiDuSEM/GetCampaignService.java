@@ -328,17 +328,18 @@ public class GetCampaignService
             { "baidusem0.properties", "baidusem1.properties",
                     "baidusem2.properties" };
 
-            Calendar calendar = Calendar.getInstance();// 此时打印它获取的是系统当前时间
-            calendar.add(Calendar.DATE, -1); // 得到前一天
-            String yestedayDate = new SimpleDateFormat("yyyyMMdd")
-                    .format(calendar.getTime());
-
             for (int i = 0; i < configurls.length; i++)
             {
                 getCampinData(configurls[i]);
             }
 
+            Calendar calendar = Calendar.getInstance();// 此时打印它获取的是系统当前时间
+            calendar.add(Calendar.DATE, -1); // 得到前一天
+            String yestedayDate = new SimpleDateFormat("yyyyMMdd")
+                    .format(calendar.getTime());
+            
             file2Hive(yestedayDate);
+            
         }
         catch (Exception e)
         {
