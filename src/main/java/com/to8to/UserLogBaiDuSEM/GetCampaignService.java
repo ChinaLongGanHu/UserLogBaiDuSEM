@@ -349,7 +349,7 @@ public class GetCampaignService
                 logger.debug("yestedayDate 2: "+yestedayDate);
             }
 
-            file2Hive(yestedayDate);
+        //    file2Hive(yestedayDate);
             
         }
         catch (Exception e)
